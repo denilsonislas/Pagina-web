@@ -15,7 +15,7 @@
             display: block;
             margin: 10px 0 5px;
         }
-        input[type="text"] {
+        input[type="text"], input[type="file"] {
             width: calc(100% - 22px);
             padding: 10px;
             margin-bottom: 10px;
@@ -23,6 +23,7 @@
         button {
             padding: 10px 15px;
             margin: 5px 0;
+            cursor: pointer;
         }
         #resultados {
             margin-top: 20px;
@@ -38,10 +39,14 @@
     <label for="archivoHtml">Seleccionar Archivo HTML:</label>
     <input type="file" id="archivoHtml" accept=".html">
     <button onclick="seleccionarArchivo()">Cargar Archivo</button>
-
+    
     <div id="resultados"></div>
 
+    <button id="procesarBranches" style="display:none;" onclick="procesarBranches()">Procesar Branches</button>
+
     <script>
+        let valoresExtraidos = {};
+
         function seleccionarArchivo() {
             const archivoInput = document.getElementById('archivoHtml');
             const archivo = archivoInput.files[0];
@@ -54,8 +59,8 @@
             const reader = new FileReader();
             reader.onload = function(event) {
                 const contenido = event.target.result;
-                const valores = obtenerValores(contenido);
-                mostrarValores(valores);
+                valoresExtraidos = obtenerValores(contenido);
+                mostrarValores(valoresExtraidos);
             };
             reader.readAsText(archivo);
         }
@@ -63,6 +68,7 @@
         function obtenerValores(contenido) {
             const parser = new DOMParser();
             const doc = parser.parseFromString(contenido, 'text/html');
+
             let correoQA = "denilson.islas@hey.inc";
             let celularSolicitante = "";
             let celularArquitecto = "";
@@ -112,6 +118,23 @@
                 const etiqueta = document.createElement('div');
                 etiqueta.innerHTML = `${etiquetas[index]} ${valor}`;
                 resultadosDiv.appendChild(etiqueta);
+            });
+
+            // Mostrar botón para procesar branches
+            document.getElementById('procesarBranches').style.display = 'block';
+        }
+
+        function procesarBranches() {
+            // Aquí puedes añadir la lógica para procesar ramas.
+            // Por ahora, simplemente mostraremos un mensaje.
+            alert('Función de procesar branches aún no implementada.');
+        }
+
+        function copiarAlPortapapeles(texto) {
+            navigator.clipboard.writeText(texto).then(() => {
+                alert('Texto copiado al portapapeles: ' + texto);
+            }).catch(err => {
+                console.error('Error al copiar: ', err);
             });
         }
     </script>
