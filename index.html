@@ -7,141 +7,86 @@
     <style>
         body {
             font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .form-group label {
+            width: 200px;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 250px;
+            padding: 5px;
         }
         #resultados {
             margin-top: 20px;
         }
-        label, input, select, button, textarea {
-            display: block;
-            margin: 10px 0;
-        }
-        .resultado-item {
-            display: flex;
-            align-items: center;
+        #comboRamas {
+            width: 100%;
+            padding: 5px;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
+    <h1>Extractor de Valores de HTML</h1>
 
-<h1>Extractor de Valores de HTML</h1>
+    <button onclick="seleccionarArchivo()">Seleccionar Archivo HTML</button>
+    <input type="file" id="fileInput" style="display: none;" accept=".html" onchange="procesarArchivo(event)">
 
-<label>Ingrese información del repositorio:</label>
-<textarea id="info_repos" rows="5" cols="50"></textarea>
-<button onclick="procesarRamas()">Procesar Branches</button>
+    <div id="resultados"></div>
 
-<label for="combo_ramas">Seleccione una rama:</label>
-<select id="combo_ramas" onchange="onComboboxSelect()"></select>
-
-<div id="resultados"></div>
-
-<input type="file" id="fileInput" accept=".html" style="margin-top: 20px;">
-<button onclick="seleccionarArchivo()">Seleccionar Archivo HTML</button>
-
-<script>
-    let ramasProcesadas = [];
-
-    function seleccionarArchivo() {
-        const fileInput = document.getElementById('fileInput');
-        const file = fileInput.files[0];
-        
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const contenido = e.target.result;
-                obtenerValores(contenido);
-            };
-            reader.readAsText(file, 'UTF-8');
+    <script>
+        function seleccionarArchivo() {
+            document.getElementById("fileInput").click();
         }
-    }
 
-    function obtenerValores(html) {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-
-        const correoQA = "denilson.islas@hey.inc";
-        const telefonoQA = "0000000000";
-        let numeroCambio = doc.querySelector('meta[name="ajs-issue-key"]')?.getAttribute('content') || '';
-        let celularSolicitante = doc.querySelector("label:contains('Celular del solicitante:')")?.nextElementSibling?.textContent.trim() || '';
-        let celularArquitecto = doc.querySelector("label:contains('Celular del arquitecto de negocio:')")?.nextElementSibling?.textContent.trim() || '';
-        let celula = doc.querySelector('#customfield_11309-val')?.textContent.trim().replace(/ /g, "_") || '';
-
-        mostrarValores([
-            correoQA, celula, '', '', numeroCambio, celularSolicitante, celularArquitecto, telefonoQA, '', '', ''
-        ]);
-    }
-
-    function mostrarValores(valores) {
-        const resultadosDiv = document.getElementById('resultados');
-        resultadosDiv.innerHTML = '';
-
-        const etiquetas = [
-            "Correo electronico QA:", "Celula:", "Branch:", "Correo del desarrollador:", 
-            "Número de Cambio:", "Celular del solicitante:", "Celular del arquitecto de negocio:", 
-            "Telefono de QA:", "MS:", "Repositorio:", "Informacion extra:"
-        ];
-
-        valores.forEach((valor, index) => {
-            const itemDiv = document.createElement('div');
-            itemDiv.classList.add('resultado-item');
-
-            const label = document.createElement('label');
-            label.textContent = etiquetas[index];
-            itemDiv.appendChild(label);
-
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.value = valor;
-            itemDiv.appendChild(input);
-
-            const copyButton = document.createElement('button');
-            copyButton.textContent = "Copiar";
-            copyButton.onclick = () => navigator.clipboard.writeText(valor);
-            itemDiv.appendChild(copyButton);
-
-            resultadosDiv.appendChild(itemDiv);
-        });
-    }
-
-    function procesarRamas() {
-        const infoRepos = document.getElementById('info_repos').value.trim();
-        ramasProcesadas = [];
-        
-        const lineas = infoRepos.split('\n').map(linea => linea.trim()).filter(linea => linea);
-        if (lineas.length > 1) lineas.shift(); // Omitir la primera línea si es el nombre del repositorio
-
-        let repositorioActual = null;
-        lineas.forEach(linea => {
-            if (!/\d/.test(linea)) {
-                repositorioActual = linea.trim();
-            } else if (repositorioActual && linea.startsWith('release')) {
-                const rama = linea.split(' ')[0].trim();
-                ramasProcesadas.push({ repo: repositorioActual, rama });
+        function procesarArchivo(event) {
+            const archivo = event.target.files[0];
+            if (archivo) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const texto = e.target.result;
+                    const valores = obtenerValores(texto);
+                    if (valores) {
+                        mostrarValores(valores);
+                    } else {
+                        mostrarMensaje("No se encontraron los valores requeridos");
+                    }
+                };
+                reader.readAsText(archivo, "UTF-8");
             }
-        });
-
-        actualizarCombobox();
-    }
-
-    function actualizarCombobox() {
-        const combo = document.getElementById('combo_ramas');
-        combo.innerHTML = ''; // Limpiar opciones previas
-        ramasProcesadas.forEach(({ repo, rama }) => {
-            const option = document.createElement('option');
-            option.value = `${repo} ${rama}`;
-            option.textContent = `${repo} ${rama}`;
-            combo.appendChild(option);
-        });
-    }
-
-    function onComboboxSelect() {
-        const seleccion = document.getElementById('combo_ramas').value;
-        if (seleccion) {
-            const [repo, rama] = seleccion.split(' ');
-            document.querySelector("input[name='ms']").value = repo;
-            document.querySelector("input[name='branch']").value = rama;
         }
-    }
-</script>
 
-</body>
-</html>
+        function obtenerValores(texto) {
+            let parser = new DOMParser();
+            let doc = parser.parseFromString(texto, "text/html");
+
+            let numeroCambio = "";
+            let celularSolicitante = "";
+            let celularArquitecto = "";
+            let celula = "";
+
+            // Buscar número de cambio en la etiqueta meta
+            let elementoNumeroCambio = doc.querySelector("meta[name='ajs-issue-key']");
+            if (elementoNumeroCambio) {
+                numeroCambio = elementoNumeroCambio.getAttribute("content");
+            }
+
+            // Buscar "Celular del solicitante:"
+            let elementoCelularSolicitante = Array.from(doc.querySelectorAll("body *"))
+                .find(el => el.textContent.includes("Celular del solicitante:"));
+            if (elementoCelularSolicitante) {
+                celularSolicitante = elementoCelularSolicitante.nextElementSibling
+                    ? elementoCelularSolicitante.nextElementSibling.textContent.trim()
+                    : "";
+            }
+
+    
