@@ -2,174 +2,146 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=4.0">
-    <title>Document</title>
-    <script src="myFunction.js"></script>
-    <script src="myFunction2.js"></script>
-    <script src="myFunction3.js"></script>
-    <script src="myFunction4.js"></script>
-    <script src="myFunction5.js"></script>
-    <script src="myFunction6.js"></script>
-    <script src="myFunction7.js"></script>
-    <script src="myFunction8.js"></script>
-    <script src="myFunction9.js"></script>
-    <script src="myFunction10.js"></script>
-    <script src="myFunction11.js"></script>
-    <script src="myFunction12.js"></script>
-    <script src="myFunction13.js"></script>
-    <script src="myFunction14.js"></script>
-    <script src="myFunction15.js"></script>
-    <script src="myFunction16.js"></script>
-    <script src="myFunction17.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extractor de Valores de HTML</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        #resultados {
+            margin-top: 20px;
+        }
+        label, input, select, button, textarea {
+            display: block;
+            margin: 10px 0;
+        }
+        .resultado-item {
+            display: flex;
+            align-items: center;
+        }
+    </style>
 </head>
 <body>
 
-    
-    <label for="texto1"></label>
-    <textarea name="texto1"></textarea>
-<br>
+<h1>Extractor de Valores de HTML</h1>
 
+<label>Ingrese información del repositorio:</label>
+<textarea id="info_repos" rows="5" cols="50"></textarea>
+<button onclick="procesarRamas()">Procesar Branches</button>
 
-    <body>Correo Electronico QA</body>
-    <br>
-    <input type="text" value="denilson.islas@hey.inc"
-id="myInput1">
-<button onclick="myFunction1()">Copiar</button>
-<br><br>
+<label for="combo_ramas">Seleccione una rama:</label>
+<select id="combo_ramas" onchange="onComboboxSelect()"></select>
 
+<div id="resultados"></div>
 
+<input type="file" id="fileInput" accept=".html" style="margin-top: 20px;">
+<button onclick="seleccionarArchivo()">Seleccionar Archivo HTML</button>
 
-        <body>Nombre de la Celula</body>
-    <br>
-    <input type="text" value=""
-id="myInput2">
-<button onclick="myFunction2()">Copiar</button>
-<br><br>
+<script>
+    let ramasProcesadas = [];
 
-                <body>branch</body>
-    <br>
-
-    <input type="text" value=""
-id="myInput3">
-<button onclick="myFunction3()">Copiar</button>
-<br><br>
-                <body>Correo Electronico Desarrollador</body>
-    <br>
-
-    <input type="text" value=""
-id="myInput4">
-<button onclick="myFunction4()">Copiar</button>
-<br><br>
-
-                    <body>Tarea de instalacion</body>
-    <br>
-
-
-    <input type="text" value=""
-id="myInput5">
-<button onclick="myFunction5()">Copiar</button>
-<br><br>
-
-                        <body>Telefono del Solicitante</body>
-    <br>
-
-
-<input type="text" value=""
-id="myInput6">
-<button onclick="myFunction6()">Copiar</button>
-<br><br>
-
-                    <body>Telefono del arquitecto</body>
-    <br>
-
-
-    <input type="text" value=""
-id="myInput7">
-<button onclick="myFunction7()">Copiar</button>
-<br><br>
-
-                    <body>Telefono de qa</body>
-    <br>
-
-    <input type="text" value="0000000000"
-id="myInput8">
-<button onclick="myFunction8()">Copiar</button>
-<br><br>
-
-    <input type="text" value=""
-id="myInput9">
-<button onclick="myFunction9()">Copiar</button>
-<br><br>
-
-    <input type="text" value=""
-id="myInput10">
-<button onclick="myFunction10()">Copiar</button>
-<br><br>
-
-<input type="text" value=""
-id="myInput11">
-<button onclick="myFunction11()">Copiar</button>
-<br><br>
-
-    <input type="text" value=""
-id="myInput12">
-<button onclick="myFunction12()">Copiar</button>
-<br><br>
-
-    <input type="text" value=""
-id="myInput13">
-<button onclick="myFunction13()">Copiar</button>
-<br><br>
-    
-    <script type="text/javascript">
-    var d= new Date();
+    function seleccionarArchivo() {
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
         
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const contenido = e.target.result;
+                obtenerValores(contenido);
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+    }
+
+    function obtenerValores(html) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        const correoQA = "denilson.islas@hey.inc";
+        const telefonoQA = "0000000000";
+        let numeroCambio = doc.querySelector('meta[name="ajs-issue-key"]')?.getAttribute('content') || '';
+        let celularSolicitante = doc.querySelector("label:contains('Celular del solicitante:')")?.nextElementSibling?.textContent.trim() || '';
+        let celularArquitecto = doc.querySelector("label:contains('Celular del arquitecto de negocio:')")?.nextElementSibling?.textContent.trim() || '';
+        let celula = doc.querySelector('#customfield_11309-val')?.textContent.trim().replace(/ /g, "_") || '';
+
+        mostrarValores([
+            correoQA, celula, '', '', numeroCambio, celularSolicitante, celularArquitecto, telefonoQA, '', '', ''
+        ]);
+    }
+
+    function mostrarValores(valores) {
+        const resultadosDiv = document.getElementById('resultados');
+        resultadosDiv.innerHTML = '';
+
+        const etiquetas = [
+            "Correo electronico QA:", "Celula:", "Branch:", "Correo del desarrollador:", 
+            "Número de Cambio:", "Celular del solicitante:", "Celular del arquitecto de negocio:", 
+            "Telefono de QA:", "MS:", "Repositorio:", "Informacion extra:"
+        ];
+
+        valores.forEach((valor, index) => {
+            const itemDiv = document.createElement('div');
+            itemDiv.classList.add('resultado-item');
+
+            const label = document.createElement('label');
+            label.textContent = etiquetas[index];
+            itemDiv.appendChild(label);
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = valor;
+            itemDiv.appendChild(input);
+
+            const copyButton = document.createElement('button');
+            copyButton.textContent = "Copiar";
+            copyButton.onclick = () => navigator.clipboard.writeText(valor);
+            itemDiv.appendChild(copyButton);
+
+            resultadosDiv.appendChild(itemDiv);
+        });
+    }
+
+    function procesarRamas() {
+        const infoRepos = document.getElementById('info_repos').value.trim();
+        ramasProcesadas = [];
         
-document.write('' + d.getDate(),'/'+ (d.getMonth() + 1),'');
+        const lineas = infoRepos.split('\n').map(linea => linea.trim()).filter(linea => linea);
+        if (lineas.length > 1) lineas.shift(); // Omitir la primera línea si es el nombre del repositorio
 
-</script><br>
-<input type="text" value= ""
-id="myInput14">
-<button onclick="myFunction14()">Copiar</button>
-<br><br>
-     
-    <script type="text/javascript">
-    var d= new Date();
-        
-document.write('' + (d.getDate() + 1),'/'+ (d.getMonth() + 1),'');
+        let repositorioActual = null;
+        lineas.forEach(linea => {
+            if (!/\d/.test(linea)) {
+                repositorioActual = linea.trim();
+            } else if (repositorioActual && linea.startsWith('release')) {
+                const rama = linea.split(' ')[0].trim();
+                ramasProcesadas.push({ repo: repositorioActual, rama });
+            }
+        });
 
-</script><br>
-<input type="text" value= ""
-id="myInput15">
-<button onclick="myFunction15()">Copiar</button>
-<br><br>
-      
-    <script type="text/javascript">
-    var d= new Date();
-        
-document.write('');
+        actualizarCombobox();
+    }
 
-</script><br> 
-<input type="text" value= ""
-id="myInput16">
-<button onclick="myFunction16()">Copiar</button>
-<br><br>
-       
-    <script type="text/javascript">
-    var d= new Date();
-        
-document.write('');
+    function actualizarCombobox() {
+        const combo = document.getElementById('combo_ramas');
+        combo.innerHTML = ''; // Limpiar opciones previas
+        ramasProcesadas.forEach(({ repo, rama }) => {
+            const option = document.createElement('option');
+            option.value = `${repo} ${rama}`;
+            option.textContent = `${repo} ${rama}`;
+            combo.appendChild(option);
+        });
+    }
 
-</script><br> 
-<input type="text" value= ""
-id="myInput17">
-<button onclick="myFunction17()">Copiar</button>
-<br><br>
-       
-    <script type="text/javascript">
-    var d= new Date();
+    function onComboboxSelect() {
+        const seleccion = document.getElementById('combo_ramas').value;
+        if (seleccion) {
+            const [repo, rama] = seleccion.split(' ');
+            document.querySelector("input[name='ms']").value = repo;
+            document.querySelector("input[name='branch']").value = rama;
+        }
+    }
+</script>
 
-    
 </body>
 </html>
