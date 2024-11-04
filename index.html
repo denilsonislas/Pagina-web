@@ -5,88 +5,155 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Extractor de Valores de HTML</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-        }
-        .form-group {
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-        }
-        .form-group label {
-            width: 200px;
-            font-weight: bold;
-        }
-        .form-group input {
-            width: 250px;
-            padding: 5px;
-        }
-        #resultados {
-            margin-top: 20px;
-        }
-        #comboRamas {
-            width: 100%;
-            padding: 5px;
-            margin-top: 20px;
-        }
+        /* Estilos básicos */
+        .label { font-weight: bold; }
+        .input-field, .textarea { width: 100%; margin: 5px 0; padding: 5px; }
+        .button { padding: 10px 15px; margin-top: 10px; }
+        .result-container { margin-top: 20px; }
     </style>
 </head>
 <body>
-    <h1>Extractor de Valores de HTML</h1>
 
-    <button onclick="seleccionarArchivo()">Seleccionar Archivo HTML</button>
-    <input type="file" id="fileInput" style="display: none;" accept=".html" onchange="procesarArchivo(event)">
+<h1>Extractor de Valores de HTML</h1>
 
-    <div id="resultados"></div>
+<!-- Selección de archivo HTML -->
+<input type="file" id="fileInput" class="button" accept=".html">
+<button onclick="procesarArchivo()" class="button">Seleccionar Archivo HTML</button>
 
-    <script>
-        function seleccionarArchivo() {
-            document.getElementById("fileInput").click();
+<!-- Entrada de información del repositorio -->
+<div>
+    <label class="label">Ingrese información del repositorio:</label>
+    <textarea id="reposInfo" class="textarea" rows="5"></textarea>
+    <button onclick="procesarRamas()" class="button">Procesar Branches</button>
+</div>
+
+<!-- Contenedor de resultados -->
+<div id="resultContainer" class="result-container"></div>
+
+<!-- ComboBox de ramas -->
+<select id="branchSelect" onchange="onComboboxSelect()" style="display: none;"></select>
+
+<script>
+let ramasProcesadas = [];
+
+function procesarArchivo() {
+    const fileInput = document.getElementById("fileInput");
+    const file = fileInput.files[0];
+    if (!file) {
+        alert("Por favor selecciona un archivo HTML.");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        const contenido = event.target.result;
+        obtenerValores(contenido);
+    };
+    reader.readAsText(file);
+}
+
+function obtenerValores(html) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+
+    const correoQa = "denilson.islas@hey.inc";
+    const telefonoQa = "0000000000";
+    let celula = "", numeroCambio = "", celularSolicitante = "", celularArquitecto = "";
+    let branch = "", correoDesarrollador = "", ms = "", repositorio = "", infoExtra = "";
+
+    const metaNumeroCambio = doc.querySelector("meta[name='ajs-issue-key']");
+    if (metaNumeroCambio) numeroCambio = metaNumeroCambio.getAttribute("content");
+
+    const elementoCelularSolicitante = doc.querySelector("body:contains('Celular del solicitante:')");
+    if (elementoCelularSolicitante) celularSolicitante = elementoCelularSolicitante.nextElementSibling.textContent.trim();
+
+    const elementoCelularArquitecto = doc.querySelector("body:contains('Celular del arquitecto de negocio:')");
+    if (elementoCelularArquitecto) celularArquitecto = elementoCelularArquitecto.nextElementSibling.textContent.trim();
+
+    const elementoCelula = doc.querySelector("#customfield_11309-val");
+    if (elementoCelula) celula = elementoCelula.textContent.trim().replace(/ /g, "_");
+
+    mostrarValores([correoQa, celula, branch, correoDesarrollador, numeroCambio, celularSolicitante, celularArquitecto, telefonoQa, ms, repositorio, infoExtra]);
+}
+
+function mostrarValores(valores) {
+    const resultContainer = document.getElementById("resultContainer");
+    resultContainer.innerHTML = ""; // Limpiar contenido previo
+
+    const etiquetas = [
+        "Correo electrónico QA:", "Celula:", "Branch:", "Correo del desarrollador:", 
+        "Número de Cambio:", "Celular del solicitante:", "Celular del arquitecto de negocio:", 
+        "Teléfono QA:", "MS:", "Repositorio:", "Información extra:"
+    ];
+
+    valores.forEach((valor, i) => {
+        const label = document.createElement("label");
+        label.classList.add("label");
+        label.textContent = etiquetas[i];
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.classList.add("input-field");
+        input.value = valor;
+
+        const button = document.createElement("button");
+        button.classList.add("button");
+        button.textContent = "Copiar";
+        button.onclick = () => copiarTexto(valor);
+
+        resultContainer.appendChild(label);
+        resultContainer.appendChild(input);
+        resultContainer.appendChild(button);
+    });
+}
+
+function copiarTexto(valor) {
+    navigator.clipboard.writeText(valor).then(() => {
+        alert("Texto copiado al portapapeles");
+    }).catch(err => {
+        console.error("Error al copiar el texto: ", err);
+    });
+}
+
+function procesarRamas() {
+    const reposInfo = document.getElementById("reposInfo").value;
+    const lineas = reposInfo.split("\n").map(linea => linea.trim()).filter(linea => linea);
+
+    ramasProcesadas = [];
+    let repositorioActual = null;
+    lineas.forEach(linea => {
+        if (!/\d/.test(linea)) {
+            repositorioActual = linea;
+        } else if (repositorioActual && linea.startsWith("release")) {
+            ramasProcesadas.push({ repo: repositorioActual, rama: linea });
         }
+    });
 
-        function procesarArchivo(event) {
-            const archivo = event.target.files[0];
-            if (archivo) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const texto = e.target.result;
-                    const valores = obtenerValores(texto);
-                    if (valores) {
-                        mostrarValores(valores);
-                    } else {
-                        mostrarMensaje("No se encontraron los valores requeridos");
-                    }
-                };
-                reader.readAsText(archivo, "UTF-8");
-            }
-        }
+    actualizarCombobox();
+}
 
-        function obtenerValores(texto) {
-            let parser = new DOMParser();
-            let doc = parser.parseFromString(texto, "text/html");
+function actualizarCombobox() {
+    const branchSelect = document.getElementById("branchSelect");
+    branchSelect.innerHTML = ""; // Limpiar contenido previo
 
-            let numeroCambio = "";
-            let celularSolicitante = "";
-            let celularArquitecto = "";
-            let celula = "";
+    ramasProcesadas.forEach(item => {
+        const option = document.createElement("option");
+        option.value = `${item.repo} ${item.rama}`;
+        option.textContent = `${item.repo} ${item.rama}`;
+        branchSelect.appendChild(option);
+    });
 
-            // Buscar número de cambio en la etiqueta meta
-            let elementoNumeroCambio = doc.querySelector("meta[name='ajs-issue-key']");
-            if (elementoNumeroCambio) {
-                numeroCambio = elementoNumeroCambio.getAttribute("content");
-            }
+    branchSelect.style.display = ramasProcesadas.length ? "block" : "none";
+}
 
-            // Buscar "Celular del solicitante:"
-            let elementoCelularSolicitante = Array.from(doc.querySelectorAll("body *"))
-                .find(el => el.textContent.includes("Celular del solicitante:"));
-            if (elementoCelularSolicitante) {
-                celularSolicitante = elementoCelularSolicitante.nextElementSibling
-                    ? elementoCelularSolicitante.nextElementSibling.textContent.trim()
-                    : "";
-            }
+function onComboboxSelect() {
+    const seleccion = document.getElementById("branchSelect").value;
+    if (seleccion) {
+        const [repo, rama] = seleccion.split(" ");
+        alert(`Repo seleccionado: ${repo}, Rama: ${rama}`);
+    }
+}
+</script>
 
-    
+</body>
+</html>
